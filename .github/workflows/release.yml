@@ -140,7 +140,7 @@ jobs:
             cc_raw=$(curl -sS -w ' |HTTP=%{http_code}' -X POST \
               -H "Authorization: Bearer $GZ_TOKEN" \
               -H "Content-Type: application/json" \
-              -d '{"slug":"release","name":"Release","platforms":["folia","paper","spigot","purpur"],"minecraft_versions":["1.14","1.15","1.16","1.17","1.18","1.19","1.20","1.21"]}' \
+              -d '{"slug":"release","name":"Release","platforms":["folia","paper","spigot","purpur"],"minecraft_versions":["1.16","1.17","1.18","1.19","1.20","1.21"]}' \
               "$GZ_API/projects/$GZ_PROJECT/channels")
             printf '%s\n' "$cc_raw" | head -c 1200
             echo
@@ -174,7 +174,7 @@ jobs:
             --arg name "$tag" \
             --arg changelog "$changelog" \
             --arg file "$asset_name" \
-            '{channel:$channel, version:$version, name:$name, changelog:$changelog, files:[$file], platforms:["folia","paper","spigot","purpur"], minecraft_versions:["1.14","1.15","1.16","1.17","1.18","1.19","1.20","1.21"]}')
+            '{channel:$channel, version:$version, name:$name, changelog:$changelog, files:[$file], platforms:["folia","paper","spigot","purpur"], minecraft_versions:["1.16","1.17","1.18","1.19","1.20","1.21","26.3"]}')
 
           echo "创建鬼斩版本..."
           post_raw=$(curl -sS -w ' |HTTP=%{http_code}' -X POST \
