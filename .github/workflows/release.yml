@@ -90,3 +90,69 @@ jobs:
           else
             gh release create "$tag" "$JAR_PATH" --title "$tag" --generate-notes
           fi
+
+      # 同步发布到鬼斩资源站（可选：未配置 GZ_TOKEN 时自动跳过）。
+      # 复用同一次 CI 构建出的 jar，保证鬼斩与 GitHub Release 的产物完全一致。
+      - name: Publish version to Guizhan Resources
+        env:
+          GZ_TOKEN: ${{ secrets.GZ_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          INPUT_TAG: ${{ inputs.tag }}
+          JAR_PATH: ${{ steps.built.outputs.path }}
+          GZ_PROJECT: NdmIOCAU
+          GZ_API: https://resources.guizhanss.com/api/v1
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GZ_TOKEN:-}" ]; then
+            echo "::notice::未配置 GZ_TOKEN，跳过鬼斩资源站发布"
+            exit 0
+          fi
+
+          if [ "$REF_TYPE" = "tag" ]; then tag="$REF_NAME"; else tag="$INPUT_TAG"; fi
+          echo "鬼斩发布版本: $tag"
+
+          # 用与 GitHub Release 完全一致的文件名，且为同一次构建产物。
+          asset_name="SlimefunSmartDeviceAddon.${tag}.jar"
+          gz_jar="/tmp/$asset_name"
+          cp "$JAR_PATH" "$gz_jar"
+
+          # 找默认 channel（草稿项目公开端点可能 404，带 token 读取）。
+          channel="release"
+          if channels_json=$(curl -fsSL -H "Authorization: Bearer $GZ_TOKEN" "$GZ_API/projects/$GZ_PROJECT/channels" 2>/dev/null); then
+            c=$(printf '%s' "$channels_json" | jq -r '.data[]? | select(.is_default == true) | .slug' | head -n1)
+            if [ -n "$c" ] && [ "$c" != "null" ]; then channel="$c"; fi
+          fi
+          echo "使用 channel: $channel"
+
+          # 幂等：已存在同名版本则跳过，避免重复创建。
+          if versions_json=$(curl -fsSL -H "Authorization: Bearer $GZ_TOKEN" "$GZ_API/projects/$GZ_PROJECT/versions?search=$tag" 2>/dev/null); then
+            existing=$(printf '%s' "$versions_json" | jq -r --arg v "$tag" '.data[]? | select(.version == $v) | .id' | head -n1)
+            if [ -n "$existing" ] && [ "$existing" != "null" ]; then
+              echo "::notice::鬼斩已存在版本 $tag（id=$existing），跳过创建"
+              exit 0
+            fi
+          fi
+
+          # changelog 与 GitHub Release 说明保持一致。
+          changelog="对应 GitHub Release: https://github.com/cyantangerine/SlimefunSmartDeviceAddon/releases/tag/$tag"
+          if gh release view "$tag" --json body --jq .body >/tmp/gz_changelog.md 2>/dev/null && [ -s /tmp/gz_changelog.md ]; then
+            changelog=$(cat /tmp/gz_changelog.md)
+          fi
+
+          data=$(jq -nc \
+            --arg channel "$channel" \
+            --arg version "$tag" \
+            --arg name "$tag" \
+            --arg changelog "$changelog" \
+            --arg file "$asset_name" \
+            '{channel:$channel, version:$version, name:$name, changelog:$changelog, files:[$file]}')
+
+          echo "创建鬼斩版本..."
+          curl -fsSL -X POST \
+            -H "Authorization: Bearer $GZ_TOKEN" \
+            -F "data=$data" \
+            -F "$asset_name=@$gz_jar" \
+            "$GZ_API/projects/$GZ_PROJECT/versions" | jq '{code, message, id: .data.id, version: .data.version, files: [.data.files[].name]}'
