@@ -128,11 +128,26 @@ jobs:
           printf '%s\n' "$chan_raw" | head -c 1200
           echo
 
-          # 从响应体里解析默认 channel slug；取不到则 fallback 到 release。
+          # 解析默认 channel；草稿项目可能一个 channel 都没有，需要先建一个。
           chan_body="${chan_raw% |HTTP=*}"
           channel="release"
           c=$(printf '%s' "$chan_body" | jq -r '.data[]? | select(.is_default == true) | .slug' 2>/dev/null | head -n1)
-          if [ -n "$c" ] && [ "$c" != "null" ]; then channel="$c"; fi
+          if [ -n "$c" ] && [ "$c" != "null" ]; then
+            channel="$c"
+          else
+            # 没有任何 channel：创建一个 Release channel（带默认平台/MC 版本）。
+            echo "项目尚无 channel，创建 Release channel..."
+            cc_raw=$(curl -sS -w ' |HTTP=%{http_code}' -X POST \
+              -H "Authorization: Bearer $GZ_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d '{"slug":"release","name":"Release","platforms":["folia","paper","spigot","purpur"],"minecraft_versions":["1.14","1.15","1.16","1.17","1.18","1.19","1.20","1.21"]}' \
+              "$GZ_API/projects/$GZ_PROJECT/channels")
+            printf '%s\n' "$cc_raw" | head -c 1200
+            echo
+            cc_body="${cc_raw% |HTTP=*}"
+            cc_slug=$(printf '%s' "$cc_body" | jq -r '.data.slug // empty' 2>/dev/null)
+            if [ -n "$cc_slug" ]; then channel="$cc_slug"; fi
+          fi
           echo "使用 channel: $channel"
 
           # ---- 诊断 + 幂等：列出已有版本 ----
@@ -159,7 +174,7 @@ jobs:
             --arg name "$tag" \
             --arg changelog "$changelog" \
             --arg file "$asset_name" \
-            '{channel:$channel, version:$version, name:$name, changelog:$changelog, files:[$file]}')
+            '{channel:$channel, version:$version, name:$name, changelog:$changelog, files:[$file], platforms:["folia","paper","spigot","purpur"], minecraft_versions:["1.14","1.15","1.16","1.17","1.18","1.19","1.20","1.21"]}')
 
           echo "创建鬼斩版本..."
           post_raw=$(curl -sS -w ' |HTTP=%{http_code}' -X POST \
