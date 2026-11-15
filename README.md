@@ -11,6 +11,13 @@
 
 ---
 
+## 下载与反馈
+
+- **下载**：从 [GitHub Releases](https://github.com/cyantangerine/SlimefunSmartDeviceAddon/releases) 获取最新版本。
+- **Bug 反馈**：遇到问题或有建议，请到 [GitHub Issues](https://github.com/cyantangerine/SlimefunSmartDeviceAddon/issues) 提交（建议附上复现步骤、服务端版本与相关日志）。
+
+---
+
 ## 灵感来源
 
 这个附属不是在移植某个 Mod，而是想把两套我很喜欢的交互范式，用 Slimefun 自己的方式重新做一遍：
@@ -40,6 +47,7 @@
 - [技术设计](#技术设计)
 - [已知限制](#已知限制)
 - [构建与部署](#构建与部署)
+- [自动发版](#自动发版)
 - [致谢](#致谢)
 
 ---
@@ -322,12 +330,11 @@ mvn clean package
 # 产物：target/SlimefunSmartDeviceAddon v1.0.0.jar
 ```
 
-若本地未缓存 Slimefun 的 DEV-SNAPSHOT，先把 `lib/Slimefun-DEV-SNAPSHOT.jar` 装进本地仓库：
+若本地未缓存 Slimefun 的 DEV-SNAPSHOT，先把 `lib/Slimefun-DEV-SNAPSHOT.jar` 装进本地仓库。用随仓库提供的精简 POM（`lib/Slimefun4-clean.pom`），避免 jar 内嵌的 dough parent 解析失败：
 
 ```bash
 mvn install:install-file -Dfile=lib/Slimefun-DEV-SNAPSHOT.jar ^
-  -DgroupId=com.github.SlimefunGuguProject -DartifactId=Slimefun4 ^
-  -Dversion=DEV-SNAPSHOT -Dpackaging=jar
+  -DpomFile=lib/Slimefun4-clean.pom
 ```
 
 Windows 下仓库另附一键脚本 `deploy.ps1` / `deploy.bat`：编译 → 停服 → 复制 jar → 重启 → 等待端口就绪。
@@ -340,6 +347,27 @@ Windows 下仓库另附一键脚本 `deploy.ps1` / `deploy.bat`：编译 → 停
 ```
 
 `pom.xml` 编译基准为 `spigot-api 1.19.2`、JDK 21；实际验证环境为 Folia / MC 26.3 API，并用 JDK 27 对真实 Folia API 做过 javac 校验。
+
+---
+
+## 自动发版
+
+GitHub Actions 会自动打包并发布到 Releases，无需手动上传：
+
+- **打标签发版**：推送一个 `v` 开头的标签即触发，例如
+  ```bash
+  git tag v1.0.1 && git push origin v1.0.1
+  ```
+- **手动发版**：在仓库 **Actions → Build & Release → Run workflow** 里填入标签触发。
+
+流水线用 JDK 21 构建，并**先用仓库内 `lib/Slimefun-DEV-SNAPSHOT.jar` 安装到本地 Maven 仓库再打包**——因为 Slimefun 的 Folia fork 在中央 / jitpack 上拉不到，直接 `mvn package` 会因缺少依赖而失败。因此 `lib/` 下的 jar 需要随仓库一起保留。
+
+两个 workflow 的分工：
+
+| Workflow | 触发 | 作用 |
+| --- | --- | --- |
+| `maven.yml` | push / PR 到 master | 构建检查，不出包 |
+| `release.yml` | `v*` 标签 / 手动 | 构建并发布 Release，附带 jar |
 
 ---
 

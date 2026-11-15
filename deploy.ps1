@@ -45,6 +45,28 @@ function Write-Step([string] $Text) { Write-Host "`n>>> $Text" -ForegroundColor 
 function Write-Ok([string] $Text)   { Write-Host "    $Text" -ForegroundColor Green }
 function Write-Note([string] $Text) { Write-Host "    $Text" -ForegroundColor Yellow }
 
+# 从 .env 读取 KEY=VALUE 到进程环境变量（支持 # 注释、行内引号）。
+# 已存在的环境变量（系统 / CI 注入）优先，不被 .env 覆盖。
+function Import-DotEnv([string] $Path) {
+    if (-not $Path -or -not (Test-Path -LiteralPath $Path)) { return }
+    foreach ($raw in (Get-Content -LiteralPath $Path -Encoding UTF8)) {
+        $line = $raw.Trim()
+        if (-not $line -or $line.StartsWith('#')) { continue }
+        $eq = $line.IndexOf('=')
+        if ($eq -le 0) { continue }
+        $key = $line.Substring(0, $eq).Trim()
+        $val = $line.Substring($eq + 1).Trim()
+        if ($val.Length -ge 2 -and
+            (($val.StartsWith('"') -and $val.EndsWith('"')) -or
+             ($val.StartsWith("'") -and $val.EndsWith("'")))) {
+            $val = $val.Substring(1, $val.Length - 2)
+        }
+        if (-not (Get-Item -Path "env:$key" -ErrorAction SilentlyContinue)) {
+            Set-Item -Path "env:$key" -Value $val
+        }
+    }
+}
+
 # 原生命令写 stderr 时，PS 5.1 在 ErrorActionPreference=Stop 下会抛 NativeCommandError。
 # 只在调用原生程序的这一小段里临时降级，脚本其余部分仍保持严格错误检查。
 function Invoke-Native([scriptblock] $Block) {
@@ -118,6 +140,16 @@ function Get-ServerPort([string] $Dir) {
 if (-not $ProjectDir) { $ProjectDir = $PSScriptRoot }
 if (-not $ProjectDir) { $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path }
 if (-not $ProjectDir) { throw '无法确定项目目录，请用 -ProjectDir 指定' }
+
+# ---------- 加载 .env（优先级：命令行参数 > .env 环境变量 > 内置默认值） ----------
+Import-DotEnv (Join-Path $ProjectDir '.env')
+if (-not $PSBoundParameters.ContainsKey('ProjectDir')   -and $env:DEPLOY_PROJECT_DIR)   { $ProjectDir    = $env:DEPLOY_PROJECT_DIR }
+if (-not $PSBoundParameters.ContainsKey('ServerDir')    -and $env:DEPLOY_SERVER_DIR)    { $ServerDir     = $env:DEPLOY_SERVER_DIR }
+if (-not $PSBoundParameters.ContainsKey('JavaHome')     -and $env:DEPLOY_JAVA_HOME)     { $JavaHome      = $env:DEPLOY_JAVA_HOME }
+if (-not $PSBoundParameters.ContainsKey('MavenCmd')     -and $env:DEPLOY_MAVEN_CMD)     { $MavenCmd      = $env:DEPLOY_MAVEN_CMD }
+if (-not $PSBoundParameters.ContainsKey('SlimefunJar')  -and $env:DEPLOY_SLIMEFUN_JAR)  { $SlimefunJar   = $env:DEPLOY_SLIMEFUN_JAR }
+if (-not $PSBoundParameters.ContainsKey('StopTimeout')  -and $env:DEPLOY_STOP_TIMEOUT)  { $StopTimeout   = [int]$env:DEPLOY_STOP_TIMEOUT }
+if (-not $PSBoundParameters.ContainsKey('StartTimeout') -and $env:DEPLOY_START_TIMEOUT) { $StartTimeout  = [int]$env:DEPLOY_START_TIMEOUT }
 
 Write-Host '=== SlimefunSmartDeviceAddon -> Folia 部署 ===' -ForegroundColor White
 Write-Host "项目目录: $ProjectDir"

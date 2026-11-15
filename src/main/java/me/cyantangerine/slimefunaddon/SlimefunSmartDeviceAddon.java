@@ -27,6 +27,11 @@ import io.github.thebusybiscuit.slimefun4.libraries.dough.items.CustomItemStack;
 import java.util.logging.Level;
 
 public class SlimefunSmartDeviceAddon extends JavaPlugin implements SlimefunAddon {
+    /** 仓库主页：Bug 追踪与物品 Wiki 页都挂在它下面。 */
+    public static final String REPOSITORY_URL = "https://github.com/cyantangerine/SlimefunSmartDeviceAddon";
+    /** 物品 Wiki 页地址模板，{0} 由 SlimefunItem#addWikiPage 填入具体页面名。 */
+    public static final String WIKI_URL_TEMPLATE = REPOSITORY_URL + "/wiki/{0}";
+
     private ResourceLib resourceLib;
     public ResourceLib getResourceLib() {
         return resourceLib;
@@ -78,6 +83,7 @@ public class SlimefunSmartDeviceAddon extends JavaPlugin implements SlimefunAddo
                 RecipeType.ENHANCED_CRAFTING_TABLE, coolerRecipe
         );
         cooler.register(this);
+        cooler.addWikiPage("Smart-Cooler");
 
         // 智能背包：与冰柜共用 SmartContainer，只把堆叠上限系数从 1 提到 4。
         // 配方中心用 Slimefun 最高级背包（辐射背包 RADIANT_BACKPACK，54 格），
@@ -95,6 +101,7 @@ public class SlimefunSmartDeviceAddon extends JavaPlugin implements SlimefunAddo
                 RecipeType.ENHANCED_CRAFTING_TABLE, backpackRecipe
         );
         backpack.register(this);
+        backpack.addWikiPage("Smart-Backpack");
 
         // ------------------------------------------------------------------
         // 智能存储：连接器负责泛洪成网络，交互接口负责把网络里的容器聚合成一个分页 GUI。
@@ -117,6 +124,7 @@ public class SlimefunSmartDeviceAddon extends JavaPlugin implements SlimefunAddo
         connector.setRecipeOutput(new SlimefunItemStack(
                 SmartStorageConnector.createItemStack(), 8));
         connector.register(this);
+        connector.addWikiPage("Storage-Connector");
 
         ItemStack[] interfaceRecipe = {
                 SlimefunItems.SOLDER_INGOT, SlimefunItems.ADVANCED_CIRCUIT_BOARD, SlimefunItems.SOLDER_INGOT,
@@ -128,6 +136,7 @@ public class SlimefunSmartDeviceAddon extends JavaPlugin implements SlimefunAddo
                 RecipeType.ENHANCED_CRAFTING_TABLE, interfaceRecipe, connector
         );
         storageInterface.register(this);
+        storageInterface.addWikiPage("Storage-Interface");
         // 让连接器在计算可视化链的入口时能认出交互终端
         connector.setInterfaceItem(storageInterface);
 
@@ -146,6 +155,7 @@ public class SlimefunSmartDeviceAddon extends JavaPlugin implements SlimefunAddo
                 RecipeType.ENHANCED_CRAFTING_TABLE, unloadRecipe, connector, storageInterface
         );
         unloadTerminal.register(this);
+        unloadTerminal.addWikiPage("Unload-Terminal");
 
         ItemStack[] loadRecipe = {
                 SlimefunItems.BILLON_INGOT, SlimefunItems.BASIC_CIRCUIT_BOARD, SlimefunItems.BILLON_INGOT,
@@ -158,6 +168,7 @@ public class SlimefunSmartDeviceAddon extends JavaPlugin implements SlimefunAddo
                 RecipeType.ENHANCED_CRAFTING_TABLE, loadRecipe, connector, storageInterface
         );
         loadTerminal.register(this);
+        loadTerminal.addWikiPage("Load-Terminal");
 
         // 无线交互终端：不可放置，右键已放置的交互终端输入名称完成绑定。
         ItemStack[] wirelessRecipe = {
@@ -170,6 +181,7 @@ public class SlimefunSmartDeviceAddon extends JavaPlugin implements SlimefunAddo
                 RecipeType.ENHANCED_CRAFTING_TABLE, wirelessRecipe, storageInterface
         );
         wirelessTerminal.register(this);
+        wirelessTerminal.addWikiPage("Wireless-Terminal");
 
         getLogger().log(Level.WARNING, "cyan 插件已启用！");
     }
@@ -183,8 +195,12 @@ public class SlimefunSmartDeviceAddon extends JavaPlugin implements SlimefunAddo
 
     @Override
     public String getBugTrackerURL() {
-        // 你可以在这里返回你的问题追踪器的网址，而不是 null
-        return null;
+        return REPOSITORY_URL + "/issues";
+    }
+
+    @Override
+    public String getWikiURL() {
+        return WIKI_URL_TEMPLATE;
     }
 
     @Override

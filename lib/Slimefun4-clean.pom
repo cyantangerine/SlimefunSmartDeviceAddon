@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  供 CI / 新环境安装 lib/Slimefun-DEV-SNAPSHOT.jar 时使用的精简 POM。
+
+  背景：这个 Folia fork 的 jar 内部 META-INF/maven/.../pom.xml 声明了
+  io.github.baked-libs:dough:1.3.1-SNAPSHOT 作为 parent 并带一堆 dough 子模块依赖，
+  而这些构件在中央 / jitpack 上都不存在，直接 install:install-file 会因解析不到
+  parent 而失败。本插件只把这个 jar 当 provided 依赖来编译（jar 本身已自包含
+  Slimefun API 的类），不需要它的传递依赖，所以用这份无 parent / 无 dependencies
+  的干净 POM 来安装。
+
+  用法见 .github/workflows/release.yml 与 maven.yml。
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.github.SlimefunGuguProject</groupId>
+    <artifactId>Slimefun4</artifactId>
+    <version>DEV-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <description>Slim POM for the bundled Slimefun Folia fork jar (provided dependency).</description>
+</project>

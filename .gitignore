@@ -7,4 +7,10 @@
 .classpath
 dependency-reduced-pom.xml
 .DS_Store
-/lib
+/lib/*
+# Folia fork jar 与它的精简安装 POM 需要随仓库提交，供 CI 构建使用
+!/lib/Slimefun-DEV-SNAPSHOT.jar
+!/lib/Slimefun4-clean.pom
+
+# 本地环境配置（含本机路径，勿提交）；模板 .env.template 仍会提交
+.env
