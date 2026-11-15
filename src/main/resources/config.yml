@@ -20,7 +20,7 @@ options:
     max-containers: 32
     # 一次泛洪 / 可视化最多遍历的连接器数，防止超大网络卡住区域线程
     max-connectors: 512
-    # 黄色粒子可视化刷新周期（tick）
+    # 红色粒子可视化刷新周期（tick）
     connector-particle-period-ticks: 10
 
   interface:

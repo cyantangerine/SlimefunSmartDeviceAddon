@@ -49,7 +49,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 具体发现逻辑见 {@link StorageNetwork#discover}。</p>
  *
  * <p><b>可视化</b>：连接成功后，从网络入口到「最后一个有链接箱子的连接器」为
- * 止，每个连接器按 Slimefun 货运节点的方式画黄色 DUST 粒子
+ * 止，每个连接器按 Slimefun 货运节点的方式画红色 DUST 粒子
  * （{@link VersionedParticle#DUST} + {@link Particle.DustOptions}）。
  * 右键任意一个连接器会把<b>整条连通链</b>的可视化一起开 / 关，状态写进
  * Slimefun 的 BlockStorage，重启后仍然记得。</p>
@@ -62,8 +62,8 @@ public class SmartStorageConnector extends SlimefunItem implements Listener {
     public static final String ID = "SMART_STORAGE_CONNECTOR";
     private static final String VISUAL_KEY = "smart_storage_visual";
 
-    /** 黄色粒子参数，与 Slimefun 的 NetworkVisualizer 同款（只是把颜色换成黄）。 */
-    private static final Particle.DustOptions DUST_YELLOW = new Particle.DustOptions(Color.YELLOW, 1.0F);
+    /** 红色粒子参数，与 Slimefun 的 NetworkVisualizer 默认红石色一致。 */
+    private static final Particle.DustOptions DUST_RED = new Particle.DustOptions(Color.RED, 1.0F);
     // 粒子刷新周期来自 config.yml，见 AddonSettings。
 
     private Plugin plugin;
@@ -120,7 +120,7 @@ public class SmartStorageConnector extends SlimefunItem implements Listener {
                 "&7放置后连接直线1格的箱子/木桶/其他连接器",
                 "&7单一连接网络内最多连接 " + AddonSettings.get().networkMaxContainers + " 个容器",
                 "&7可使用智能存储交互终端进行多容器存取",
-                "&e右键 &7切换整条链的黄色粒子可视化"
+                "&c右键 &7切换整条链的红色粒子可视化"
         );
     }
 
@@ -186,7 +186,7 @@ public class SmartStorageConnector extends SlimefunItem implements Listener {
             rebuildVisible();
 
             String message = (enable ? ChatColor.GREEN + "已开启" : ChatColor.GRAY + "已关闭")
-                    + ChatColor.YELLOW + " 智能存储网络可视化"
+                    + ChatColor.RED + " 智能存储网络可视化"
                     + ChatColor.GRAY + "（" + size + " 个连接器）";
             resourceLib.runAtEntity(player, () -> player.sendMessage(message));
         });
@@ -328,7 +328,7 @@ public class SmartStorageConnector extends SlimefunItem implements Listener {
             location.getWorld().spawnParticle(
                     VersionedParticle.DUST,
                     location.getX() + 0.5D, location.getY() + 0.5D, location.getZ() + 0.5D,
-                    1, 0.0D, 0.0D, 0.0D, 1.0D, DUST_YELLOW);
+                    1, 0.0D, 0.0D, 0.0D, 1.0D, DUST_RED);
         } catch (RuntimeException | LinkageError ex) {
             resourceLib.warn("绘制存储连接器粒子失败", ex);
         }
