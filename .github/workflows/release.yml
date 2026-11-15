@@ -105,7 +105,7 @@ jobs:
           GZ_API: https://resources.guizhanss.com/api/v1
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
           if [ -z "${GZ_TOKEN:-}" ]; then
             echo "::notice::未配置 GZ_TOKEN，跳过鬼斩资源站发布"
             exit 0
@@ -119,21 +119,32 @@ jobs:
           gz_jar="/tmp/$asset_name"
           cp "$JAR_PATH" "$gz_jar"
 
-          # 找默认 channel（草稿项目公开端点可能 404，带 token 读取）。
+          # ---- 诊断：确认 token 有效性与项目可见性（不打印 token） ----
+          echo "=== diag: GET /users/@me ==="
+          curl -sS -w ' |HTTP=%{http_code}' -H "Authorization: Bearer $GZ_TOKEN" "$GZ_API/users/@me" | head -c 600
+          echo
+          echo "=== diag: GET channels ==="
+          chan_raw=$(curl -sS -w ' |HTTP=%{http_code}' -H "Authorization: Bearer $GZ_TOKEN" "$GZ_API/projects/$GZ_PROJECT/channels")
+          printf '%s\n' "$chan_raw" | head -c 1200
+          echo
+
+          # 从响应体里解析默认 channel slug；取不到则 fallback 到 release。
+          chan_body="${chan_raw% |HTTP=*}"
           channel="release"
-          if channels_json=$(curl -fsSL -H "Authorization: Bearer $GZ_TOKEN" "$GZ_API/projects/$GZ_PROJECT/channels" 2>/dev/null); then
-            c=$(printf '%s' "$channels_json" | jq -r '.data[]? | select(.is_default == true) | .slug' | head -n1)
-            if [ -n "$c" ] && [ "$c" != "null" ]; then channel="$c"; fi
-          fi
+          c=$(printf '%s' "$chan_body" | jq -r '.data[]? | select(.is_default == true) | .slug' 2>/dev/null | head -n1)
+          if [ -n "$c" ] && [ "$c" != "null" ]; then channel="$c"; fi
           echo "使用 channel: $channel"
 
-          # 幂等：已存在同名版本则跳过，避免重复创建。
-          if versions_json=$(curl -fsSL -H "Authorization: Bearer $GZ_TOKEN" "$GZ_API/projects/$GZ_PROJECT/versions?search=$tag" 2>/dev/null); then
-            existing=$(printf '%s' "$versions_json" | jq -r --arg v "$tag" '.data[]? | select(.version == $v) | .id' | head -n1)
-            if [ -n "$existing" ] && [ "$existing" != "null" ]; then
-              echo "::notice::鬼斩已存在版本 $tag（id=$existing），跳过创建"
-              exit 0
-            fi
+          # ---- 诊断 + 幂等：列出已有版本 ----
+          echo "=== diag: GET versions ==="
+          ver_raw=$(curl -sS -w ' |HTTP=%{http_code}' -H "Authorization: Bearer $GZ_TOKEN" "$GZ_API/projects/$GZ_PROJECT/versions?search=$tag")
+          printf '%s\n' "$ver_raw" | head -c 1200
+          echo
+          ver_body="${ver_raw% |HTTP=*}"
+          existing=$(printf '%s' "$ver_body" | jq -r --arg v "$tag" '.data[]? | select(.version == $v) | .id' 2>/dev/null | head -n1)
+          if [ -n "$existing" ] && [ "$existing" != "null" ]; then
+            echo "::notice::鬼斩已存在版本 $tag（id=$existing），跳过创建"
+            exit 0
           fi
 
           # changelog 与 GitHub Release 说明保持一致。
@@ -151,8 +162,17 @@ jobs:
             '{channel:$channel, version:$version, name:$name, changelog:$changelog, files:[$file]}')
 
           echo "创建鬼斩版本..."
-          curl -fsSL -X POST \
+          post_raw=$(curl -sS -w ' |HTTP=%{http_code}' -X POST \
             -H "Authorization: Bearer $GZ_TOKEN" \
             -F "data=$data" \
             -F "$asset_name=@$gz_jar" \
-            "$GZ_API/projects/$GZ_PROJECT/versions" | jq '{code, message, id: .data.id, version: .data.version, files: [.data.files[].name]}'
+            "$GZ_API/projects/$GZ_PROJECT/versions")
+          printf '%s\n' "$post_raw" | head -c 2000
+          echo
+          post_body="${post_raw% |HTTP=*}"
+          if printf '%s' "$post_body" | jq -e '.data.id != null' >/dev/null 2>&1; then
+            echo "鬼斩版本发布成功"
+          else
+            echo "::error::鬼斩版本发布失败（见上方响应体）"
+            exit 1
+          fi
