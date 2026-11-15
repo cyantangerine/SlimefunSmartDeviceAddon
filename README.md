@@ -362,12 +362,14 @@ GitHub Actions 会自动打包并发布到 Releases，无需手动上传：
 
 流水线用 JDK 21 构建，并**先用仓库内 `lib/Slimefun-DEV-SNAPSHOT.jar` 安装到本地 Maven 仓库再打包**——因为 Slimefun 的 Folia fork 在中央 / jitpack 上拉不到，直接 `mvn package` 会因缺少依赖而失败。因此 `lib/` 下的 jar 需要随仓库一起保留。
 
+发版时还会**同步发布到[鬼斩资源站](https://resources.guizhanss.com/project/slimefun-smart-device-addon)**：用同一次构建出的 jar 创建同名版本（如 `v1.0.1`），版本号、文件名、jar 内容与 GitHub Release 完全一致，changelog 直接取 GitHub Release 的说明。这一步需要仓库 Secret `GZ_TOKEN`（鬼斩访问令牌，需含 `project:version:create` 作用域）；未配置时自动跳过，不影响 GitHub Release。若鬼斩上已存在同名版本则跳过创建，重复运行不会产生重复版本。
+
 两个 workflow 的分工：
 
 | Workflow | 触发 | 作用 |
 | --- | --- | --- |
 | `maven.yml` | push / PR 到 master | 构建检查，不出包 |
-| `release.yml` | `v*` 标签 / 手动 | 构建并发布 Release，附带 jar |
+| `release.yml` | `v*` 标签 / 手动 | 构建并发布 GitHub Release（附带 jar），同步发版到鬼斩资源站 |
 
 ---
 
