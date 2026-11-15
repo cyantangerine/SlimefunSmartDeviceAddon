@@ -157,6 +157,9 @@ jobs:
             patch_code="${patch_raw##* |HTTP=}"
             if [[ "$patch_code" =~ ^2[0-9][0-9]$ ]]; then
               echo "鬼斩已存在版本 $tag（id=$existing），跳过创建；兼容性元数据已同步：$patch_data"
+              # 回读确认（草稿项目公开 API 不可见，只能在带 token 的 CI 里验证）。
+              curl -sS -H "$auth" "$api/versions/$existing" \
+                | jq -c '{platforms: .data.platforms, minecraft_versions: .data.minecraft_versions}' 2>/dev/null || true
             else
               echo "::warning::鬼斩已存在版本 $tag（id=$existing），跳过创建；同步兼容性元数据失败（HTTP $patch_code）：${patch_body:0:400}"
             fi
