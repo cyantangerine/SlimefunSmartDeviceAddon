@@ -74,6 +74,12 @@ jobs:
           fi
           echo "发布标签: $tag"
           if gh release view "$tag" >/dev/null 2>&1; then
+            # 已存在的 Release（例如手动建的 pre-release）：转为正式版、刷新标题，
+            # 并清掉旧产物，避免用户下载到不含最新改动的旧 jar。
+            gh release edit "$tag" --prerelease=false --draft=false --title "$tag"
+            gh release view "$tag" --json assets --jq '.assets[].id' | while read -r id; do
+              gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$id" >/dev/null
+            done
             gh release upload "$tag" "$JAR_PATH" --clobber
           else
             gh release create "$tag" "$JAR_PATH" --title "$tag" --generate-notes
