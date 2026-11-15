@@ -103,6 +103,10 @@ jobs:
           JAR_PATH: ${{ steps.built.outputs.path }}
           GZ_PROJECT: NdmIOCAU
           GZ_API: https://resources.guizhanss.com/api/v1
+          # 插件实际支持范围：服务端 Paper / Folia，MC 1.21.2 ~ 26.3 之间的全部版本。
+          # MC 版本必须是鬼斩认可的值（见 GET /api/v1/data/minecraft-versions）。
+          GZ_PLATFORMS: '["paper","folia"]'
+          GZ_MC_VERSIONS: '["1.21.2","1.21.3","1.21.4","1.21.5","1.21.6","1.21.7","1.21.8","1.21.9","1.21.10","1.21.11","26.1","26.1.1","26.1.2","26.2","26.3"]'
         shell: bash
         run: |
           set -uo pipefail
@@ -139,11 +143,23 @@ jobs:
           fi
           echo "使用 channel: $channel"
 
-          # 幂等：同名版本已存在则跳过，避免重复创建。
+          # 幂等：同名版本已存在时不重复创建，但同步更新兼容平台 / MC 版本。
+          # 这样调整支持范围后重跑本 workflow 即可修正已发布版本的元数据（不改动 jar）。
           ver_raw=$(curl -sS -w ' |HTTP=%{http_code}' -H "$auth" "$api/versions?search=$tag")
           existing=$(printf '%s' "${ver_raw% |HTTP=*}" | jq -r --arg v "$tag" '.data[]? | select(.version == $v) | .id' 2>/dev/null | head -n1)
           if [ -n "$existing" ] && [ "$existing" != "null" ]; then
-            echo "::notice::鬼斩已存在版本 $tag（id=$existing），跳过创建"
+            patch_data=$(jq -nc --argjson p "$GZ_PLATFORMS" --argjson m "$GZ_MC_VERSIONS" '{platforms:$p, minecraft_versions:$m}')
+            patch_raw=$(curl -sS -w ' |HTTP=%{http_code}' -X PATCH \
+              -H "$auth" -H "Content-Type: application/json" \
+              -d "$patch_data" \
+              "$api/versions?ids=$existing")
+            patch_body="${patch_raw% |HTTP=*}"
+            patch_code="${patch_raw##* |HTTP=}"
+            if [[ "$patch_code" =~ ^2[0-9][0-9]$ ]]; then
+              echo "鬼斩已存在版本 $tag（id=$existing），跳过创建；兼容性元数据已同步：$patch_data"
+            else
+              echo "::warning::鬼斩已存在版本 $tag（id=$existing），跳过创建；同步兼容性元数据失败（HTTP $patch_code）：${patch_body:0:400}"
+            fi
             exit 0
           fi
 
@@ -153,14 +169,16 @@ jobs:
             changelog=$(cat /tmp/gz_changelog.md)
           fi
 
-          # 版本号 / 名称直接沿用 git 标签；MC 版本必须是鬼斩认可的值（见 /data/minecraft-versions）。
+          # 版本号 / 名称直接沿用 git 标签；平台与 MC 版本取自 GZ_PLATFORMS / GZ_MC_VERSIONS。
           data=$(jq -nc \
             --arg channel "$channel" \
             --arg version "$tag" \
             --arg name "$tag" \
             --arg changelog "$changelog" \
             --arg file "$asset_name" \
-            '{channel:$channel, version:$version, name:$name, changelog:$changelog, files:[$file], platforms:["folia","paper","spigot","purpur"], minecraft_versions:["1.16","1.17","1.18","1.19","1.20","1.21","26.3"]}')
+            --argjson platforms "$GZ_PLATFORMS" \
+            --argjson mc "$GZ_MC_VERSIONS" \
+            '{channel:$channel, version:$version, name:$name, changelog:$changelog, files:[$file], platforms:$platforms, minecraft_versions:$mc}')
 
           echo "创建鬼斩版本..."
           post_raw=$(curl -sS -w ' |HTTP=%{http_code}' -X POST \

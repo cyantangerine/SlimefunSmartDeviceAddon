@@ -83,7 +83,8 @@
 
 | 项目 | 要求                                                                                    |
 | --- |---------------------------------------------------------------------------------------|
-| 服务端 | Canvas / Folia（推荐）/ Paper / Spigot                                                    |
+| 服务端 | **Paper / Folia（推荐）**                                                                |
+| Minecraft 版本 | **1.21.2 ~ 26.3**（含之间的全部版本：1.21.2–1.21.11、26.1 系列、26.2、26.3）                    |
 | 前置 | **Slimefun**（`plugin.yml` 中为硬依赖）                                                      |
 | Slimefun 版本 | 需要支持 Folia 的较新的 DEV / RC-36+ 版本：代码依赖 `PlayerBackpack#getAsync(ItemStack)`，缺失会在启动时明确报错 |
 | Java | 21                                                                                    |
@@ -346,7 +347,7 @@ Windows 下仓库另附一键脚本 `deploy.ps1` / `deploy.bat`：编译 → 停
 .\deploy.ps1 -DeploySlimefun # 同时部署本地 Slimefun fork 构建出的 jar
 ```
 
-`pom.xml` 编译基准为 `spigot-api 1.19.2`、JDK 21；实际验证环境为 Folia / MC 26.3 API，并用 JDK 27 对真实 Folia API 做过 javac 校验。
+`pom.xml` 编译基准为 `spigot-api 1.19.2`、JDK 21（仅作编译 API 基线，**不代表运行支持范围**，实际支持版本见「环境要求与安装」）；实际验证环境为 Folia / MC 26.3 API，并用 JDK 27 对真实 Folia API 做过 javac 校验。
 
 ---
 
@@ -362,7 +363,7 @@ GitHub Actions 会自动打包并发布到 Releases，无需手动上传：
 
 流水线用 JDK 21 构建，并**先用仓库内 `lib/Slimefun-DEV-SNAPSHOT.jar` 安装到本地 Maven 仓库再打包**——因为 Slimefun 的 Folia fork 在中央 / jitpack 上拉不到，直接 `mvn package` 会因缺少依赖而失败。因此 `lib/` 下的 jar 需要随仓库一起保留。
 
-发版时还会**同步发布到[鬼斩资源站](https://resources.guizhanss.com/project/slimefun-smart-device-addon)**：用同一次构建出的 jar 创建同名版本（如 `v1.0.1`），版本号、文件名、jar 内容与 GitHub Release 完全一致，changelog 直接取 GitHub Release 的说明。这一步需要仓库 Secret `GZ_TOKEN`（鬼斩访问令牌，需含 `project:version:create` 作用域）；未配置时自动跳过，不影响 GitHub Release。若鬼斩上已存在同名版本则跳过创建，重复运行不会产生重复版本。
+发版时还会**同步发布到[鬼斩资源站](https://resources.guizhanss.com/project/slimefun-smart-device-addon)**：用同一次构建出的 jar 创建同名版本（如 `v1.0.1`），版本号、文件名、jar 内容与 GitHub Release 完全一致，changelog 直接取 GitHub Release 的说明。这一步需要仓库 Secret `GZ_TOKEN`（鬼斩访问令牌，需含 `project:version:create` / `project:version:update` 作用域）；未配置时自动跳过，不影响 GitHub Release。发版时会把支持范围写入鬼斩版本（服务端 `paper` / `folia`，MC 版本 1.21.2 ~ 26.3 之间的全部 15 个鬼斩有效值）；若鬼斩上已存在同名版本则跳过创建、只同步兼容性元数据，重复运行不会产生重复版本，也不会覆盖已上传的 jar。
 
 两个 workflow 的分工：
 
