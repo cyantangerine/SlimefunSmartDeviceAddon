@@ -24,6 +24,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import lombok.Getter;
+import me.cyantangerine.slimefunaddon.model.AddonSettings;
 import me.cyantangerine.slimefunaddon.model.ResourceLib;
 import me.cyantangerine.slimefunaddon.model.VanillaItemName;
 import me.cyantangerine.slimefunaddon.utils.Utils;
@@ -62,16 +63,14 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import javax.swing.*;
 
 public abstract class SmartContainer extends SlimefunBackpack implements Listener {
-    /** 一次创造模式点击会连发两个包，动作只做一次 */
-    private static final long CREATIVE_ACTION_DEDUP_MILLIS = 250L;
-    /** 幽灵占位物的兜底回收窗口：客户端可能过几秒才把倒出的物品写回某个格子 */
-    private static final long CREATIVE_LEAK_WINDOW_MILLIS = 15_000L;
+    // 创造模式去重 / 占位物回收窗口、首次命名监视器的周期与次数
+    // 全部来自 config.yml，见 AddonSettings。
     /**
      * 占位物的 PDC 标记。客户端把 BundleMeta 里的玻璃瓶/冰"倒出来"时会保留完整 NBT，
      * 凭这个标记就能精确回收，绝不误伤玩家自己的普通玻璃瓶/冰。
      * 用不带 Plugin 的构造，是为了在注册前的静态物品模板里也能打标。
      */
-    private static final NamespacedKey PLACEHOLDER_KEY = new NamespacedKey("cyantestaddon", "sc_placeholder");
+    private static final NamespacedKey PLACEHOLDER_KEY = new NamespacedKey("slimefunsmartdeviceaddon", "sc_placeholder");
     /** 1.19.2 客户端把 bundle 满格写死为 64 权重，没有 setMaxStackSize 时用它做映射 */
     public static final int LEGACY_BUNDLE_MAX_WEIGHT = 64;
     /**
@@ -79,9 +78,6 @@ public abstract class SmartContainer extends SlimefunBackpack implements Listene
      * 编译目标是 1.19.2，只能反射；老服务端上为 null，见 {@link #createFiller(int)}。
      */
     private static final Method SET_MAX_STACK_SIZE = findSetMaxStackSize();
-    /** 首次命名：轮询检测绑定完成的周期与最长次数（10 tick × 60 ≈ 30 秒） */
-    private static final long INIT_WATCH_PERIOD_TICKS = 10L;
-    private static final int INIT_WATCH_MAX_CHECKS = 60;
     /** Slimefun 绑定背包前留在 lore 里的两行占位 */
     private static final String LORE_ID_PREFIX = ChatColor.GRAY + "ID: ";
     private static final String ID_PLACEHOLDER = "<ID>";
@@ -895,7 +891,7 @@ public abstract class SmartContainer extends SlimefunBackpack implements Listene
     /** 是否处在"刚右键倒出过占位物"的回收窗口内。 */
     private boolean withinCreativeLeakWindow(Player player) {
         Long last = creativeSpillAt.get(player.getUniqueId());
-        return last != null && System.currentTimeMillis() - last < CREATIVE_LEAK_WINDOW_MILLIS;
+        return last != null && System.currentTimeMillis() - last < AddonSettings.get().creativeLeakWindowMillis;
     }
 
     private void markSpill(Player player) {
@@ -984,7 +980,7 @@ public abstract class SmartContainer extends SlimefunBackpack implements Listene
         if (last == null) {
             return true;
         }
-        if (now - last < CREATIVE_ACTION_DEDUP_MILLIS) {
+        if (now - last < AddonSettings.get().creativeActionDedupMillis) {
             return false;
         }
         creativeActionAt.put(uuid, now);
@@ -1204,7 +1200,7 @@ public abstract class SmartContainer extends SlimefunBackpack implements Listene
         int[] checks = {0};
 
         WrappedTask task = foliaLib.getScheduler().runAtEntityTimer(player, () -> {
-            if (!player.isOnline() || checks[0]++ >= INIT_WATCH_MAX_CHECKS || !isOurContainer(item)) {
+            if (!player.isOnline() || checks[0]++ >= AddonSettings.get().initWatchMaxChecks || !isOurContainer(item)) {
                 stopInitWatch(uuid);
                 return;
             }
@@ -1213,7 +1209,7 @@ public abstract class SmartContainer extends SlimefunBackpack implements Listene
                 applyDisplay(item, readUsed(item));
                 stopInitWatch(uuid);
             }
-        }, INIT_WATCH_PERIOD_TICKS, INIT_WATCH_PERIOD_TICKS);
+        }, AddonSettings.get().initWatchPeriodTicks, AddonSettings.get().initWatchPeriodTicks);
 
         if (task == null) {
             return;

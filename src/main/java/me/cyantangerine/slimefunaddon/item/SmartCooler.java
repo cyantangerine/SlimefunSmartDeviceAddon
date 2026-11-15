@@ -16,6 +16,7 @@ import java.util.concurrent.ConcurrentMap;
 import javax.annotation.ParametersAreNonnullByDefault;
 
 import io.github.thebusybiscuit.slimefun4.utils.SlimefunUtils;
+import me.cyantangerine.slimefunaddon.model.AddonSettings;
 import me.cyantangerine.slimefunaddon.utils.Utils;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
@@ -44,7 +45,7 @@ import org.bukkit.potion.PotionEffect;
  * <p>本类不注册 Slimefun 自带的 {@code CoolerListener}：它在 Folia 上把
  * {@code addPotionEffect} 丢到全局区域线程，会抛线程检查异常导致果汁没被喝掉，
  * 而 {@code CoolerFeedPlayerEvent} 却在异常之前就发出去了。这里改成自己的
- * Folia 安全实现：只要玩家饱和度低于 {@link #SATURATION_THRESHOLD} 就喝一瓶，
+ * Folia 安全实现：只要玩家饱和度低于 config.yml 配置的阈值就喝一瓶，
  * 且扫描整份玩家背包（不限快捷栏或手持）。</p>
  *
  * <p>手持右键容器（箱子/桶/潜影盒/漏斗/发射器/投掷器）会把容器里的果汁批量装载进冰柜，
@@ -84,33 +85,8 @@ public class SmartCooler extends SmartContainer implements Listener {
      * 新建背包时传给 Slimefun 的格数，与容量一致
      */
     public static final int DEFAULT_SIZE = CAPACITY;
-    /**
-     * 堆叠上限系数：冰柜 = 1，即完全沿用物品原版上限。
-     * 果汁是玻璃瓶/药水（maxStackSize = 1），所以仍是一格一瓶，
-     * 容量条、格数、瓶数三者保持一一对应。
-     */
-    public static final int STACK_MULTIPLIER = 1;
-
-    /**
-     * 饱和度低于这个值就自动喝果汁；不依赖饱食度下降事件
-     */
-    private static final float SATURATION_THRESHOLD = 2.0F;
-    /**
-     * 喝一瓶果汁后恢复到的饱和度，与 Slimefun 官方 Cooler 保持一致
-     */
-    private static final float SATURATION_RESTORE = 6.0F;
-    /**
-     * 两次自动饮用尝试的最小间隔，避免没果汁时反复查库
-     */
-    private static final long FEED_COOLDOWN_MILLIS = 2000L;
-    /**
-     * 饱和度轮询周期（tick）。EntityExhaustionEvent 负责即时触发，定时器负责兜底
-     */
-    private static final long CHECK_INTERVAL_TICKS = 10L;
-    /**
-     * 当被消耗后，小冰柜内的数量小于指定值时，都发消息，负数表示关闭
-     **/
-    private static final short WARNING_IF_ITEMS_COUNT_BELOW = 3;
+    // 堆叠系数、自动饮用阈值 / 冷却 / 轮询周期、低余量告警数量
+    // 全部来自 config.yml，见 AddonSettings。
 
     private static final String NOT_ENOUGH_WARN_EMPTY = ChatColor.YELLOW + "[ " + ChatColor.WHITE + " %s " + ChatColor.YELLOW + " ] 里已经没有果汁。";
     private static final String NOT_ENOUGH_WARN = ChatColor.YELLOW + "[ " + ChatColor.WHITE + " %s " + ChatColor.YELLOW + " ] 里只剩下 " + ChatColor.RED + "%d" + ChatColor.YELLOW + " 瓶果汁。";
@@ -181,7 +157,7 @@ public class SmartCooler extends SmartContainer implements Listener {
 
     @Override
     protected int getStackMultiplier() {
-        return STACK_MULTIPLIER;
+        return AddonSettings.get().coolerStackMultiplier;
     }
 
     public static SlimefunItemStack createItemStack() {
@@ -213,7 +189,7 @@ public class SmartCooler extends SmartContainer implements Listener {
                 () -> {
                     if (player.isOnline()) maybeFeed(player);
                 },
-                CHECK_INTERVAL_TICKS, CHECK_INTERVAL_TICKS
+                AddonSettings.get().coolerCheckIntervalTicks, AddonSettings.get().coolerCheckIntervalTicks
         );
 
         if (task == null) {
@@ -261,7 +237,7 @@ public class SmartCooler extends SmartContainer implements Listener {
     }
 
     private void maybeFeed(Player player) {
-        if (!player.isOnline() || player.getSaturation() >= SATURATION_THRESHOLD) {
+        if (!player.isOnline() || player.getSaturation() >= AddonSettings.get().coolerSaturationThreshold) {
             return;
         }
         // GUI 开着时 Inventory 由 Slimefun 的 BackpackListener 负责，异步改另一份实例会互相覆盖
@@ -273,7 +249,7 @@ public class SmartCooler extends SmartContainer implements Listener {
         if (until != null && now < until) {
             return;
         }
-        feedCooldown.put(player.getUniqueId(), now + FEED_COOLDOWN_MILLIS);
+        feedCooldown.put(player.getUniqueId(), now + AddonSettings.get().coolerFeedCooldownMillis);
 
         feed(player, player.getFoodLevel() <= 0);
     }
@@ -310,13 +286,13 @@ public class SmartCooler extends SmartContainer implements Listener {
         readBackpack(item, backpack -> getResourceLib().runAtEntity(player, () -> {
             boolean drank = false;
             try {
-                if (player.isOnline() && player.getSaturation() < SATURATION_THRESHOLD) {
+                if (player.isOnline() && player.getSaturation() < AddonSettings.get().coolerSaturationThreshold) {
                     drank = consume(player, item, backpack, restoreFood);
                 }
             } catch (RuntimeException | LinkageError ex) {
                 getResourceLib().warn("自动饮用失败", ex);
             } finally {
-                if (drank || !player.isOnline() || player.getSaturation() >= SATURATION_THRESHOLD) {
+                if (drank || !player.isOnline() || player.getSaturation() >= AddonSettings.get().coolerSaturationThreshold) {
                     busyUnlock(uuid, token);
                 } else {
                     // 这个冰柜没果汁（或还没初始化），继续看下一个
@@ -335,14 +311,14 @@ public class SmartCooler extends SmartContainer implements Listener {
             return false;
         }
         // 多个触发源（exhaustion / 定时器 / 饥饿伤害）可能排队，喝之前再确认一次
-        if (player.getSaturation() >= SATURATION_THRESHOLD) {
+        if (player.getSaturation() >= AddonSettings.get().coolerSaturationThreshold) {
             return false;
         }
 
         Inventory inv = backpack.getInventory();
 
         int slot = -1;
-        int count = 0, max = Math.min(CAPACITY, WARNING_IF_ITEMS_COUNT_BELOW);
+        int count = 0, max = Math.min(CAPACITY, AddonSettings.get().coolerLowJuiceWarningBelow);
         boolean warn = false;
         for (int i = 0; i < inv.getSize(); i++) {
             if (isAllowedItem(inv.getItem(i))) {
@@ -384,7 +360,7 @@ public class SmartCooler extends SmartContainer implements Listener {
             }
         }
 
-        player.setSaturation(SATURATION_RESTORE);
+        player.setSaturation(AddonSettings.get().coolerSaturationRestore);
         if (restoreFood) {
             player.setFoodLevel(Math.min(20, player.getFoodLevel() + 1));
         }

@@ -9,6 +9,7 @@ import io.github.thebusybiscuit.slimefun4.api.player.PlayerBackpack;
 import io.github.thebusybiscuit.slimefun4.api.recipes.RecipeType;
 import io.github.thebusybiscuit.slimefun4.core.handlers.BlockUseHandler;
 import io.github.thebusybiscuit.slimefun4.utils.LoreBuilder;
+import me.cyantangerine.slimefunaddon.model.AddonSettings;
 import me.cyantangerine.slimefunaddon.model.ResourceLib;
 import me.cyantangerine.slimefunaddon.model.StorageAccess;
 import me.cyantangerine.slimefunaddon.model.StorageNetwork;
@@ -91,7 +92,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p><b>外部改动</b>：界面打开期间漏斗 / 货运 / 其它玩家都可能改动连接的箱子。
  * 缓存的 {@link Inventory} 指向真实方块实体，所以存取永远读的是实时内容；
- * 界面每 20 tick 用库存指纹比对一次、有变化才重绘，每 100 tick 重新发现一次网络。
+ * 界面按 config.yml 配置的周期用库存指纹比对一次、有变化才重绘，并按配置的间隔重新发现网络。
  * 默认<b>不冻结</b>外部搬运；想要「打开期间库存严格不变」可在 config.yml 打开
  * {@code options.smart-storage-lock-external-transfers}。</p>
  *
@@ -129,9 +130,7 @@ public class SmartStorageInterface extends SlimefunItem implements Listener {
     private static final String SORT_KEY = "smart_storage_sort";
     private static final String ACL_KEY = "smart_storage_acl";
 
-    /** 界面实时刷新周期（tick），以及每隔几轮做一次完整的网络重发现。 */
-    private static final long REFRESH_PERIOD_TICKS = 20L;
-    private static final int FULL_REDISCOVER_EVERY = 5;
+    // 刷新周期与全量重发现间隔来自 config.yml，见 AddonSettings。
 
     private static final String GUI_TITLE = colorize("&8智能存储交互终端");
     private static final String PERMISSION_TITLE = colorize("&8智能存储交互终端 · 权限管理");
@@ -181,9 +180,7 @@ public class SmartStorageInterface extends SlimefunItem implements Listener {
         plugin = getAddon().getJavaPlugin();
         resourceLib = Utils.initialCheck(plugin);
         StorageAccess.init(plugin);
-        // 缺失该键时 Bukkit 的 getBoolean 返回 false，老配置文件也能平滑升级
-        lockExternalTransfers = resourceLib.getConfig()
-                .getBoolean("options.smart-storage-lock-external-transfers");
+        lockExternalTransfers = AddonSettings.get().lockExternalTransfers;
         addItemHandler((BlockUseHandler) this::onRightClick);
         Bukkit.getPluginManager().registerEvents(this, plugin);
         registerCargoGuard();
@@ -348,7 +345,7 @@ public class SmartStorageInterface extends SlimefunItem implements Listener {
         try {
             Bukkit.getPluginManager().registerEvents(new CargoGuard(), plugin);
         } catch (LinkageError | RuntimeException ex) {
-            plugin.getLogger().warning("[CyanTestAddon] 当前 Slimefun 版本没有货运操作事件，"
+            plugin.getLogger().warning("[SlimefunSmartDeviceAddon] 当前 Slimefun 版本没有货运操作事件，"
                     + "已跳过货运拦截；红石与漏斗拦截仍然生效。");
         }
     }
@@ -573,7 +570,7 @@ public class SmartStorageInterface extends SlimefunItem implements Listener {
         private final Map<Integer, Integer> entrySlots = new HashMap<>();
         /** 头颅格 -> 玩家 UUID。权限页与玩家选择页共用。 */
         private final Map<Integer, UUID> headSlots = new HashMap<>();
-        /** 每 20 tick 的实时刷新任务；关界面 / 退出时取消。 */
+        /** 按配置周期 的实时刷新任务；关界面 / 退出时取消。 */
         private WrappedTask refreshTask;
         private int refreshTicks;
     }
@@ -886,7 +883,7 @@ public class SmartStorageInterface extends SlimefunItem implements Listener {
     /**
      * 只在内容真的变了才重绘。漏斗 / 货运每 tick 都可能搬东西，
      * 无条件 clear()+setItem() 会让客户端每秒闪一次 54 格。
-     * 停留在权限页时只更新数据、不重绘，避免每 20 tick 把头颅列表刷一遍。
+     * 停留在权限页时只更新数据、不重绘，避免按配置周期 把头颅列表刷一遍。
      */
     private void rescanIfChanged(Player player, View view) {
         StorageSnapshot fresh = StorageSnapshot.of(view.network);
@@ -931,7 +928,7 @@ public class SmartStorageInterface extends SlimefunItem implements Listener {
         try {
             view.refreshTask = resourceLib.getFoliaLib().getScheduler()
                     .runAtEntityTimer(player, () -> refreshTick(player, view),
-                            REFRESH_PERIOD_TICKS, REFRESH_PERIOD_TICKS);
+                            AddonSettings.get().interfaceRefreshPeriodTicks, AddonSettings.get().interfaceRefreshPeriodTicks);
         } catch (RuntimeException | LinkageError ex) {
             // 定时器起不来不影响使用：点击时仍会 rescanIfChanged / refreshNetwork
             resourceLib.warn("启动智能存储界面刷新任务失败", ex);
@@ -956,7 +953,7 @@ public class SmartStorageInterface extends SlimefunItem implements Listener {
             return;
         }
         rescanIfChanged(player, view);
-        if (++view.refreshTicks % FULL_REDISCOVER_EVERY == 0) {
+        if (++view.refreshTicks % AddonSettings.get().interfaceFullRediscoverEvery == 0) {
             refreshNetwork(player, view);
         }
     }

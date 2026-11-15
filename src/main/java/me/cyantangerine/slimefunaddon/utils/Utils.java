@@ -3,7 +3,7 @@ package me.cyantangerine.slimefunaddon.utils;
 import io.github.thebusybiscuit.slimefun4.api.items.SlimefunItem;
 import io.github.thebusybiscuit.slimefun4.api.player.PlayerBackpack;
 import io.github.thebusybiscuit.slimefun4.implementation.items.backpacks.SlimefunBackpack;
-import me.cyantangerine.slimefunaddon.CyanTestAddon;
+import me.cyantangerine.slimefunaddon.SlimefunSmartDeviceAddon;
 import me.cyantangerine.slimefunaddon.model.ResourceLib;
 import org.bukkit.Material;
 import org.bukkit.Tag;
@@ -19,7 +19,7 @@ public class Utils {
             throw new VerifyError("不支持的版本 至少使用 Slimefun RC-36 及以上");
         }
 
-        if (plugin instanceof CyanTestAddon addon) {
+        if (plugin instanceof SlimefunSmartDeviceAddon addon) {
             return addon.getResourceLib();
         }
         throw new RuntimeException("错误：该组件必须在插件中运行");

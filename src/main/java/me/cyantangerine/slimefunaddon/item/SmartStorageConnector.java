@@ -8,6 +8,7 @@ import io.github.thebusybiscuit.slimefun4.api.recipes.RecipeType;
 import io.github.thebusybiscuit.slimefun4.core.handlers.BlockPlaceHandler;
 import io.github.thebusybiscuit.slimefun4.core.handlers.BlockUseHandler;
 import io.github.thebusybiscuit.slimefun4.utils.compatibility.VersionedParticle;
+import me.cyantangerine.slimefunaddon.model.AddonSettings;
 import me.cyantangerine.slimefunaddon.model.ResourceLib;
 import me.cyantangerine.slimefunaddon.model.StorageNetwork;
 import me.cyantangerine.slimefunaddon.model.StorageNetwork.BlockKey;
@@ -44,7 +45,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>放置后会连接上下左右前后 1 格的箱子 / 陷阱箱 / 木桶；遇到另一个连接器就
  * 泛洪，组成一条连接器链。箱子是叶子节点，不会把两条链合并成一个网络。
- * 单个网络最多 32 个容器（大箱子算 1 个），距离 = 经过的连接器个数（最短路），
+ * 单个网络默认最多 32 个容器（可在 config.yml 调整；大箱子算 1 个），距离 = 经过的连接器个数（最短路），
  * 具体发现逻辑见 {@link StorageNetwork#discover}。</p>
  *
  * <p><b>可视化</b>：连接成功后，从网络入口到「最后一个有链接箱子的连接器」为
@@ -63,7 +64,7 @@ public class SmartStorageConnector extends SlimefunItem implements Listener {
 
     /** 黄色粒子参数，与 Slimefun 的 NetworkVisualizer 同款（只是把颜色换成黄）。 */
     private static final Particle.DustOptions DUST_YELLOW = new Particle.DustOptions(Color.YELLOW, 1.0F);
-    private static final long PARTICLE_PERIOD_TICKS = 10L;
+    // 粒子刷新周期来自 config.yml，见 AddonSettings。
 
     private Plugin plugin;
     private ResourceLib resourceLib;
@@ -106,18 +107,18 @@ public class SmartStorageConnector extends SlimefunItem implements Listener {
 
         // 全局定时器不碰世界，只把粒子任务派到各个连接器自己的区域线程
         resourceLib.getFoliaLib().getScheduler().runTimer(this::particleTick,
-                PARTICLE_PERIOD_TICKS, PARTICLE_PERIOD_TICKS);
+                AddonSettings.get().connectorParticlePeriodTicks, AddonSettings.get().connectorParticlePeriodTicks);
     }
 
     public static SlimefunItemStack createItemStack() {
         // 物品模板数量必须是 1：Slimefun 破坏方块时的掉落走 getDrops() ->
         // itemStackTemplate.clone()，模板若为 8 则「放置 1 个、破坏掉 8 个」可无限刷物品。
-        // 「一次合成 8 个」在 CyanTestAddon 注册时通过 setRecipeOutput(独立 8 份产出) 实现，
+        // 「一次合成 8 个」在 SlimefunSmartDeviceAddon 注册时通过 setRecipeOutput(独立 8 份产出) 实现，
         // 配方产出与物品模板分离，互不影响。
         return new SlimefunItemStack(ID, Material.END_ROD,
                 "&a智能存储连接器",
                 "&7放置后连接直线1格的箱子/木桶/其他连接器",
-                "&7单一连接网络内最多连接 32 个容器",
+                "&7单一连接网络内最多连接 " + AddonSettings.get().networkMaxContainers + " 个容器",
                 "&7可使用智能存储交互终端进行多容器存取",
                 "&e右键 &7切换整条链的黄色粒子可视化"
         );

@@ -9,6 +9,7 @@ import io.github.thebusybiscuit.slimefun4.core.attributes.NotPlaceable;
 import io.github.thebusybiscuit.slimefun4.core.handlers.ItemUseHandler;
 import io.github.thebusybiscuit.slimefun4.libraries.dough.chat.ChatInput;
 import io.github.thebusybiscuit.slimefun4.utils.LoreBuilder;
+import me.cyantangerine.slimefunaddon.model.AddonSettings;
 import me.cyantangerine.slimefunaddon.model.ResourceLib;
 import me.cyantangerine.slimefunaddon.utils.Utils;
 import me.mrCookieSlime.Slimefun.api.BlockStorage;
@@ -52,7 +53,7 @@ public class SmartStorageWirelessTerminal extends SlimefunItem implements Listen
 
     public static final String ID = "SMART_STORAGE_WIRELESS_TERMINAL";
     private static final String SUFFIX = " [无线存储终端]";
-    private static final int MAX_NAME_LENGTH = 24;
+    // 绑定名称最大长度来自 config.yml，见 AddonSettings。
 
     private static final String NEED_BIND = colorize(
             "&c尚未绑定：请手持本物品右键一个已放置的智能存储交互终端进行绑定。");
@@ -171,9 +172,9 @@ public class SmartStorageWirelessTerminal extends SlimefunItem implements Listen
 
         ChatInput.waitForPlayer(plugin, player, (p, raw) -> {
             String name = raw == null ? "" : raw.trim();
-            if (name.isEmpty() || name.length() > MAX_NAME_LENGTH) {
+            if (name.isEmpty() || name.length() > AddonSettings.get().wirelessMaxNameLength) {
                 resourceLib.runAtEntity(p, () -> p.sendMessage(colorize(
-                        "&c名称需为 1~" + MAX_NAME_LENGTH + " 个字符，请重新右键终端绑定。")));
+                        "&c名称需为 1~" + AddonSettings.get().wirelessMaxNameLength + " 个字符，请重新右键终端绑定。")));
                 return;
             }
             resourceLib.runAtEntity(p, () -> {

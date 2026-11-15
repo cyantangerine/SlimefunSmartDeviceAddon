@@ -21,13 +21,12 @@ import org.bukkit.plugin.Plugin;
 import java.util.logging.Level;
 
 public class ResourceLib {
-    public static final boolean DEBUG_MODE = true;
     public static class Debug {
         public static void msg(Player player, String msg, ItemStack item) {
             msg(player, String.format("%s: %s[%s] x %d", msg, item.getType().name(), item.getItemMeta() != null && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : "", item.getAmount()));
         }
         public static void msg(Player player, String msg) {
-            if (ResourceLib.DEBUG_MODE) player.sendMessage(msg);
+            if (AddonSettings.isDebug()) player.sendMessage(msg);
         }
         public static void msg(Player player, Event event, StringBuilder msg) {
             if (msg == null) msg = new StringBuilder();

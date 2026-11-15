@@ -1,7 +1,58 @@
+# SlimefunSmartDeviceAddon 配置
+# 所有可调参数都在这里，改完重启服务器生效。
+# 若某个键被删掉，插件启动时会退回内置默认值（不会报错）。
+
 options:
-  auto-update: true
+  # 预留开关，目前没有实际的自动更新逻辑
+  #  auto-update: true
+
+  # 给玩家发送事件 / 点击类型等调试消息。正式发布建议改为 false
+  debug: false
+
   # 智能存储交互界面「打开期间」是否冻结已连接容器的外部搬运（漏斗 / Slimefun 货运结点）。
-  # false（默认）：界面每 20 tick 实时刷新，漏斗与货运照常工作，显示自动跟上。
+  # false（默认）：界面按 interface.refresh-period-ticks 实时刷新，漏斗与货运照常工作，显示自动跟上。
   # true：打开期间拦截外部搬运，保证看到的数量与点击结果严格一致，但自动化会短暂停摆。
   # 注意：无论此项如何设置，交互接口方块本身永远不接受红石 / 漏斗 / 货运。
   smart-storage-lock-external-transfers: false
+
+  network:
+    # 单条连接器链最多聚合的容器数（大箱子算 1 个）
+    max-containers: 32
+    # 一次泛洪 / 可视化最多遍历的连接器数，防止超大网络卡住区域线程
+    max-connectors: 512
+    # 黄色粒子可视化刷新周期（tick）
+    connector-particle-period-ticks: 10
+
+  interface:
+    # 交互终端打开期间的刷新周期（tick）
+    refresh-period-ticks: 20
+    # 每刷新多少次做一次全量容器重发现（1 = 每次都重发现）
+    full-rediscover-every: 5
+
+  wireless-terminal:
+    # 绑定名称允许的最大字符数
+    max-name-length: 24
+
+  container:
+    # 智能背包 / 小冰柜的单格堆叠上限系数（1 = 原版堆叠，封顶 64）
+    # 目前，暂无法突破原版堆叠上限 64，请勿修改。
+    backpack-stack-multiplier: 1
+    cooler-stack-multiplier: 1
+    # 创造模式点击去重窗口（毫秒），防止一次点击被多个事件重复处理
+    creative-action-dedup-millis: 250
+    # 创造模式占位物泄漏回收窗口（毫秒）
+    creative-leak-window-millis: 15000
+    # 背包首次初始化监视器的检查周期（tick）与最大检查次数
+    init-watch-period-ticks: 10
+    init-watch-max-checks: 60
+
+  cooler:
+    # 饱和度低于 threshold 时自动喝果汁，喝完把饱和度恢复到 restore
+    saturation-threshold: 2.0
+    saturation-restore: 6.0
+    # 两次自动饮用之间的冷却（毫秒）
+    feed-cooldown-millis: 2000
+    # 自动饮用检查周期（tick）
+    check-interval-ticks: 10
+    # 剩余果汁少于该数量时发出低余量提示（0 = 关闭提示）
+    low-juice-warning-below: 3

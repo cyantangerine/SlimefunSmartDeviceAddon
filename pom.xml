@@ -4,7 +4,9 @@
 
     <modelVersion>4.0.0</modelVersion>
     <groupId>me.cyantangerine</groupId>
-    <artifactId>CyanTestAddon</artifactId>
+    <artifactId>SlimefunSmartDeviceAddon</artifactId>
+    <!-- finalName 使用 ${project.name}，显式声明以保证 jar 名与插件名一致 -->
+    <name>SlimefunSmartDeviceAddon</name>
     <version>1.0.0</version>
 
     <properties>
@@ -100,7 +102,7 @@
 <!--            <groupId>io.github.Slimefun</groupId>-->
 <!--            <artifactId>Slimefun4</artifactId>-->
 <!--            <version>RC-32</version>-->
-<!--&lt;!&ndash;            <systemPath>C:\Users\Elvin\Desktop\GitHub\TestSlimeAddon\lib\Slimefun-DEV-SNAPSHOT.jar</systemPath>&ndash;&gt;-->
+<!--&lt;!&ndash;            <systemPath>lib/Slimefun-DEV-SNAPSHOT.jar</systemPath>&ndash;&gt;-->
 <!--            <scope>provided</scope>-->
 <!--            <exclusions>-->
 <!--                <exclusion>-->

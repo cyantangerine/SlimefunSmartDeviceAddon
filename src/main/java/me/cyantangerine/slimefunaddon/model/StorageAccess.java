@@ -68,7 +68,7 @@ public final class StorageAccess {
             return 0;
         }
         if (plugin == null) {
-            plugin = Bukkit.getPluginManager().getPlugin("CyanTestAddon");
+            plugin = Bukkit.getPluginManager().getPlugin("SlimefunSmartDeviceAddon");
         }
         if (!loaded) {
             synchronized (StorageAccess.class) {
@@ -178,7 +178,7 @@ public final class StorageAccess {
                 }
             }
         } catch (IOException | RuntimeException ex) {
-            plugin.getLogger().warning("[CyanTestAddon] 读取智能存储终端坐标表失败，将在打开终端时重建：" + ex.getMessage());
+            plugin.getLogger().warning("[SlimefunSmartDeviceAddon] 读取智能存储终端坐标表失败，将在打开终端时重建：" + ex.getMessage());
         }
     }
 
@@ -194,7 +194,7 @@ public final class StorageAccess {
             Files.write(path, lines, StandardCharsets.UTF_8);
         } catch (IOException | RuntimeException ex) {
             if (plugin != null) {
-                plugin.getLogger().warning("[CyanTestAddon] 保存智能存储终端坐标表失败：" + ex.getMessage());
+                plugin.getLogger().warning("[SlimefunSmartDeviceAddon] 保存智能存储终端坐标表失败：" + ex.getMessage());
             }
         }
     }

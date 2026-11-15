@@ -44,10 +44,7 @@ import java.util.UUID;
  */
 public final class StorageNetwork {
 
-    /** 一个网络最多连接的容器数（大箱子算 1 个）。 */
-    public static final int MAX_CONTAINERS = 32;
-    /** 防御性上限：避免有人摆出超长连接器链把一次发现拖死。 */
-    public static final int MAX_CONNECTORS = 512;
+    // 容器 / 连接器上限来自 config.yml，见 AddonSettings。
 
     private static final BlockFace[] FACES = {
             BlockFace.UP, BlockFace.DOWN, BlockFace.NORTH,
@@ -307,7 +304,7 @@ public final class StorageNetwork {
                 // 遇到连接器就泛洪；箱子不传播，两个相邻网络不会经箱子合并
                 if (isConnector(neighbour, connectorItem)) {
                     if (!connectorDistances.containsKey(neighbour)
-                            && connectorDistances.size() < MAX_CONNECTORS) {
+                            && connectorDistances.size() < AddonSettings.get().networkMaxConnectors) {
                         connectorDistances.put(neighbour, distance + 1);
                         queue.add(neighbour);
                     }
@@ -321,7 +318,7 @@ public final class StorageNetwork {
                 linked = true;
                 ContainerRef previous = containers.get(found.key);
                 if (previous == null) {
-                    if (containers.size() < MAX_CONTAINERS) {
+                    if (containers.size() < AddonSettings.get().networkMaxContainers) {
                         containers.put(found.key, found);
                     }
                 } else if (distance < previous.distance
@@ -400,7 +397,7 @@ public final class StorageNetwork {
         } catch (RuntimeException | LinkageError ignored) {
             // Folia 上若该方块恰好落在其它区域，跳过它而不是让整次发现炸掉
             if (CROSS_REGION_WARNED.compareAndSet(false, true)) {
-                Bukkit.getLogger().warning("[CyanTestAddon] 智能存储：部分容器不在交互接口所在的 Folia 区域，"
+                Bukkit.getLogger().warning("[SlimefunSmartDeviceAddon] 智能存储：部分容器不在交互接口所在的 Folia 区域，"
                         + "已跳过；请把存储网络放在同一区域内。");
             }
             return null;
@@ -488,7 +485,7 @@ public final class StorageNetwork {
         Queue<BlockKey> queue = new ArrayDeque<>();
         distances.put(root, 0);
         queue.add(root);
-        while (!queue.isEmpty() && distances.size() < MAX_CONNECTORS) {
+        while (!queue.isEmpty() && distances.size() < AddonSettings.get().networkMaxConnectors) {
             BlockKey current = queue.poll();
             int next = distances.get(current) + 1;
             for (BlockKey neighbour : current.neighbours()) {
@@ -525,7 +522,7 @@ public final class StorageNetwork {
             }
         }
         Set<BlockKey> found = new LinkedHashSet<>();
-        while (!queue.isEmpty() && visited.size() < MAX_CONNECTORS) {
+        while (!queue.isEmpty() && visited.size() < AddonSettings.get().networkMaxConnectors) {
             BlockKey current = queue.poll();
             for (BlockKey neighbour : current.neighbours()) {
                 if (isInterface(neighbour, interfaceItem)) {

@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-    一键编译 CyanTestAddon、部署到 Folia 服务器 plugins 目录并重启服务器。
+    一键编译 SlimefunSmartDeviceAddon、部署到 Folia 服务器 plugins 目录并重启服务器。
 
 .DESCRIPTION
     流程：
@@ -119,7 +119,7 @@ if (-not $ProjectDir) { $ProjectDir = $PSScriptRoot }
 if (-not $ProjectDir) { $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path }
 if (-not $ProjectDir) { throw '无法确定项目目录，请用 -ProjectDir 指定' }
 
-Write-Host '=== CyanTestAddon -> Folia 部署 ===' -ForegroundColor White
+Write-Host '=== SlimefunSmartDeviceAddon -> Folia 部署 ===' -ForegroundColor White
 Write-Host "项目目录: $ProjectDir"
 Write-Host "服务器目录: $ServerDir"
 
@@ -147,7 +147,7 @@ if ($SkipBuild) {
 # ---------- 2. 定位产物 ----------
 Write-Step '2/5 定位构建产物'
 $targetDir = Join-Path $ProjectDir 'target'
-$jar = Get-Item -LiteralPath (Join-Path $targetDir 'CyanTestAddon v1.0.0.jar') -ErrorAction SilentlyContinue
+$jar = Get-Item -LiteralPath (Join-Path $targetDir 'SlimefunSmartDeviceAddon v1.0.0.jar') -ErrorAction SilentlyContinue
 if (-not $jar) {
     $jar = Get-ChildItem -LiteralPath $targetDir -Filter '*.jar' -File -ErrorAction SilentlyContinue |
         Where-Object { $_.Name -notlike 'original-*' } |
@@ -205,7 +205,7 @@ if ($NoRestart) {
 
 # ---------- 4. 部署 jar ----------
 Write-Step '4/5 部署 jar 到 plugins'
-$oldJars = @(Get-ChildItem -LiteralPath $pluginsDir -Filter 'CyanTestAddon*.jar' -File -ErrorAction SilentlyContinue)
+$oldJars = @(Get-ChildItem -LiteralPath $pluginsDir -Filter 'SlimefunSmartDeviceAddon*.jar' -File -ErrorAction SilentlyContinue)
 $fileWait = if ($NoRestart) { 3 } else { 20 }
 foreach ($old in $oldJars) {
     if (-not (Wait-FileFree $old.FullName $fileWait)) {

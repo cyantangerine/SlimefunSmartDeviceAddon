@@ -10,6 +10,7 @@ import me.cyantangerine.slimefunaddon.item.SmartStorageConnector;
 import me.cyantangerine.slimefunaddon.item.SmartStorageInterface;
 import me.cyantangerine.slimefunaddon.item.SmartStorageTransferTerminal;
 import me.cyantangerine.slimefunaddon.item.SmartStorageWirelessTerminal;
+import me.cyantangerine.slimefunaddon.model.AddonSettings;
 import me.cyantangerine.slimefunaddon.model.ResourceLib;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -25,7 +26,7 @@ import io.github.thebusybiscuit.slimefun4.libraries.dough.items.CustomItemStack;
 
 import java.util.logging.Level;
 
-public class CyanTestAddon extends JavaPlugin implements SlimefunAddon {
+public class SlimefunSmartDeviceAddon extends JavaPlugin implements SlimefunAddon {
     private ResourceLib resourceLib;
     public ResourceLib getResourceLib() {
         return resourceLib;
@@ -34,11 +35,12 @@ public class CyanTestAddon extends JavaPlugin implements SlimefunAddon {
     @Override
     public void onEnable() {
         resourceLib = new ResourceLib(this);
-        // 从 config.yml 中读取插件配置
+        // 全部可调参数统一从 config.yml 读取，必须早于任何物品注册 / 事件处理
         Config cfg = resourceLib.getConfig();
-        if (cfg.getBoolean("options.auto-update")) {
-            // 你可以在这里添加自动更新功能
-        }
+        AddonSettings.init(cfg);
+//        if (cfg.getBoolean("options.auto-update")) {
+//            // 你可以在这里添加自动更新功能
+//        }
 
 //        NamespacedKey categoryId = new NamespacedKey(this, "cool_category");
 //        CustomItemStack categoryItem = new CustomItemStack(Material.DIAMOND, "&4非常炫酷的分类");

@@ -115,7 +115,7 @@ public final class StorageOrganizer {
                     state.originals.add(original);
                     state.occupiedBefore += occupied(current);
                 } catch (RuntimeException | LinkageError ex) {
-                    Bukkit.getLogger().warning("[CyanTestAddon] 智能存储整理：读取容器 "
+                    Bukkit.getLogger().warning("[SlimefunSmartDeviceAddon] 智能存储整理：读取容器 "
                             + container.label + " 失败，已跳过。");
                 }
             }
@@ -139,7 +139,7 @@ public final class StorageOrganizer {
                                 ? null : current[slot].clone());
                     } catch (RuntimeException | LinkageError ex) {
                         failed = true;
-                        Bukkit.getLogger().warning("[CyanTestAddon] 智能存储整理：写入容器 "
+                        Bukkit.getLogger().warning("[SlimefunSmartDeviceAddon] 智能存储整理：写入容器 "
                                 + containers.get(c).label + " 失败，已回滚该容器。");
                         break;
                     }
